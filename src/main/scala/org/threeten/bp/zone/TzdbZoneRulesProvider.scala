@@ -93,76 +93,68 @@ object TzdbZoneRulesProvider {
 
 final class TzdbZoneRulesProvider extends ZoneRulesProvider {
   /**
-    * All the regions that are available.
-    */
-  private val regionIds: java.util.Set[String] = new CopyOnWriteArraySet[String]
-  /**
-    * All the versions that are available.
-    */
-  private val versions: ConcurrentNavigableMap[String, TzdbZoneRulesProvider.Version] = new ConcurrentSkipListMap[String, TzdbZoneRulesProvider.Version]
-  /**
-    * All the URLs that have been loaded.
-    * Uses String to avoid equals() on URL.
-    */
-  private val loadedUrls: java.util.Set[String] = new CopyOnWriteArraySet[String]
-
-  /// !!! FIXME
-
-  /**
-    * Creates an instance.
-    * Created by the {@code ServiceLoader}.
-    *
-    * @throws ZoneRulesException if unable to load
-    */
-  //def this() = {
-    if (!load(classOf[ZoneRulesProvider].getClassLoader)) {
-      throw new ZoneRulesException("No time-zone rules found for 'TZDB'")
-    }
-  //}
-
-  /**
     * Creates an instance and loads the specified URL.
     * <p>
     * This could be used to wrap this provider in another instance.
     *
-    * @param url  the URL to load, not null
+    * @param url the URL to load, not null
     * @throws ZoneRulesException if unable to load
     */
-  /*
-  def this(url: URL) {
-    try {
-      if (load(url) == false) {
-        throw new ZoneRulesException("No time-zone rules found: " + url)
-      }
+
+    /**
+      * Creates an instance and loads the specified input stream.
+      * <p>
+      * This could be used to wrap this provider in another instance.
+      *
+      * @param stream the stream to load, not null, not closed after use
+      * @throws ZoneRulesException if unable to load
+      */
+  //  if (stream != null) {
+//    try {
+//      load(stream)
+//    }
+//    catch {
+//      case ex: Exception => {
+//        throw new ZoneRulesException("Unable to load TZDB time-zone rules", ex)
+//      }
+//    }
+//  } else if (url != null) {
+//    try {
+//      if (!load(url)) {
+//        throw new ZoneRulesException("No time-zone rules found: " + url)
+//      }
+//    }
+//    catch {
+//      case ex: Exception => {
+//        throw new ZoneRulesException("Unable to load TZDB time-zone rules: " + url, ex)
+//      }
+//    }
+//  } else {
+    /**
+      * Creates an instance.
+      * Created by the {@code ServiceLoader}.
+      *
+      * @throws ZoneRulesException if unable to load
+      */
+    if (!load(classOf[ZoneRulesProvider].getClassLoader)) {
+      throw new ZoneRulesException("No time-zone rules found for 'TZDB'")
     }
-    catch {
-      case ex: Exception => {
-        throw new ZoneRulesException("Unable to load TZDB time-zone rules: " + url, ex)
-      }
-    }
-  }
-  */
+//  }
 
   /**
-    * Creates an instance and loads the specified input stream.
-    * <p>
-    * This could be used to wrap this provider in another instance.
-    *
-    * @param stream  the stream to load, not null, not closed after use
-    * @throws ZoneRulesException if unable to load
+    * All the regions that are available.
     */
-  /*
-  def this(stream: InputStream) {
-    try {
-      load(stream)
-    }
-    catch {
-      case ex: Exception => {
-        throw new ZoneRulesException("Unable to load TZDB time-zone rules", ex)
-      }
-    }
-  }
-  */
+  private lazy val regionIds: java.util.Set[String] = new CopyOnWriteArraySet[String]
+  /**
+    * All the versions that are available.
+    */
+  private lazy val versions: ConcurrentNavigableMap[String, TzdbZoneRulesProvider.Version] = new ConcurrentSkipListMap[String, TzdbZoneRulesProvider.Version]
+  /**
+    * All the URLs that have been loaded.
+    * Uses String to avoid equals() on URL.
+    */
+  private lazy val loadedUrls: java.util.Set[String] = new CopyOnWriteArraySet[String]
+
 
   protected def provideZoneIds: java.util.Set[String] = new java.util.HashSet[String](regionIds)
 
@@ -223,6 +215,8 @@ final class TzdbZoneRulesProvider extends ZoneRulesProvider {
   @throws[IOException]
   @throws[ZoneRulesException]
   private def load(url: URL): Boolean = {
+    require(url != null, "url must not be null")
+    require(loadedUrls != null, "loadedUrls must not be null")
     var updated: Boolean = false
     if (loadedUrls.add(url.toExternalForm)) {
       var in: InputStream = null
@@ -316,20 +310,20 @@ final class TzdbZoneRulesProvider extends ZoneRulesProvider {
     {
       var i: Int = 0
       while (i < versionCount) {
-          val versionRegionCount: Int = dis.readShort
-          val versionRegionArray: Array[String] = new Array[String](versionRegionCount)
-          val versionRulesArray: Array[Short] = new Array[Short](versionRegionCount)
+        val versionRegionCount: Int = dis.readShort
+        val versionRegionArray: Array[String] = new Array[String](versionRegionCount)
+        val versionRulesArray: Array[Short] = new Array[Short](versionRegionCount)
 
-          {
-            var j: Int = 0
-            while (j < versionRegionCount) {
-              versionRegionArray(j) = regionArray(dis.readShort)
-              versionRulesArray(j) = dis.readShort
-              j += 1
-            }
+        {
+          var j: Int = 0
+          while (j < versionRegionCount) {
+            versionRegionArray(j) = regionArray(dis.readShort)
+            versionRulesArray(j) = dis.readShort
+            j += 1
           }
-          versionSet.add(new TzdbZoneRulesProvider.Version(versionArray(i), versionRegionArray, versionRulesArray, ruleData))
-          i += 1
+        }
+        versionSet.add(new TzdbZoneRulesProvider.Version(versionArray(i), versionRegionArray, versionRulesArray, ruleData))
+        i += 1
       }
     }
     versionSet
